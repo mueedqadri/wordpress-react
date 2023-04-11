@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Update system packages
+echo "Updating system packages..."
+sudo dnf update -y
+
+# Install necessary packages
+echo "Installing necessary packages..."
+sudo dnf install -y wget unzip
+
+# Download latest WordPress
+echo "Downloading latest WordPress release..."
+wget https://wordpress.org/latest.zip
+
+# Unzip WordPress archive
+echo "Unzipping WordPress archive..."
+unzip latest.zip
+
+# Create a directory for WordPress
+echo "Creating WordPress directory in Apache root..."
+sudo mkdir -p /var/www/html/wordpress
+
+# Move WordPress files to the directory
+echo "Moving WordPress files to /var/www/html/wordpress..."
+sudo mv wordpress/* /var/www/html/wordpress/
+
+# Set proper ownership and permissions
+echo "Setting proper ownership and permissions..."
+sudo chown -R apache:apache /var/www/html/wordpress
+sudo chmod -R 755 /var/www/html/wordpress
+
+# Create MySQL database and user for WordPress
+echo "Creating MySQL database and user for WordPress..."
+sudo mysql -u root -p <<MYSQL_SCRIPT
+CREATE DATABASE wordpress_db;
+CREATE USER 'wp_user'@'localhost' IDENTIFIED BY 'wp_password';
+GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost';
+FLUSH PRIVILEGES;
+MYSQL_SCRIPT
+
+# Create wp-config.php file
+echo "Creating wp-config.php file..."
+sudo cp /var/www/html/wordpress/wp-config-sample.php /var/www/html/wordpress/wp-config.php
+sudo sed -i "s/database_name_here/wordpress_db/" /var/www/html/wordpress/wp-config.php
+sudo sed -i "s/username_here/wp_user/" /var/www/html/wordpress/wp-config.php
+sudo sed -i "s/password_here/wp_password/" /var/www/html/wordpress/wp-config.php
+
+# Restart Apache
+echo "Restarting Apache..."
+sudo systemctl restart httpd
+
+# Remove downloaded files
+echo "Cleaning up..."
+rm -rf wordpress latest.zip
+
+echo "WordPress installation completed. Please visit your server IP address or domain name followed by /wordpress to complete the setup."
+
